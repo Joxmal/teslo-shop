@@ -1,6 +1,7 @@
 version: '3.9'
 services:
   db:
+    container_name: teslodb
     image: postgres
     restart: always
     ports:
@@ -8,7 +9,6 @@ services:
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    container_name: teslodb
     volumes:
       - ./postgres:/var/lib/postgresql/data
   
