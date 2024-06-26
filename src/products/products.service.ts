@@ -3,9 +3,10 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { validate as isUUID } from 'uuid'
+import { ProductImage } from './entities/product-images.entity';
 
 @Injectable()
 export class ProductsService {
@@ -16,33 +17,60 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+
+    @InjectRepository(ProductImage)
+    private readonly ProductImageRepository: Repository<ProductImage>,
+
+    private readonly dataSource: DataSource
+
   ) {}
 
 
   async create(createProductDto: CreateProductDto) {
     try {
+      const {images=[], ...ProductsDetails } = createProductDto
 
-      const product = this.productRepository.create(createProductDto);
+      const product = this.productRepository.create({
+        ...createProductDto,
+        images: images.map(image => this.ProductImageRepository.create({url:image}))
+      });
 
       await this.productRepository.save(product);
 
-      return product
+      return {
+        ...product,
+        images: product.images.map(image => image.url)
+      }
 
       
     } catch (error) {
       if(error.code === '23505') 
         this.handleDBExceptions(error)
     }
-
-
   }
 
-  findAll(PaginationDto: PaginationDto) {
+  async findAll(PaginationDto: PaginationDto) {
      const { limit = 10, offset = 0 } = PaginationDto
-      return this.productRepository.find({
+
+      const products = await this.productRepository.find({
         take: limit,
-        skip: offset
+        skip: offset,
+        relations: {
+          images: true
+        },
+        order: {
+          price: 'DESC'
+        }
       })
+
+
+       return {
+        products: products.map(product => ({
+          ...product,
+          images: product.images.map(image => image.url)
+        })),
+        total: products.length
+       }
       // TODO: relaciones
     // return this.productRepository.find().
   }
@@ -56,12 +84,14 @@ export class ProductsService {
 
      }else{
       
-      const queryBuilder = this.productRepository.createQueryBuilder()
+      const queryBuilder = this.productRepository.createQueryBuilder('prod')
         product = await queryBuilder
         .where( ' UPPER(title)=:title or slug =:slug', {
           title: term.toUpperCase(),
           slug: term.toLowerCase() 
-        }).getOne()
+        })
+        .leftJoinAndSelect('prod.images','prodImages')
+        .getOne()
      }
     
       if(!product) 
@@ -69,17 +99,51 @@ export class ProductsService {
       return product
   }
 
+  async findOnePlain(term:string){
+    try {
+      const {images = [],...rest} = await this.findOne(term)
+      return {
+        ...rest,
+        images: images.map(image => image.url)
+      }
+    } catch (error) {
+      this.handleDBExceptions(error)
+    }
+  }
+
   async update(id: string, updateProductDto: UpdateProductDto) {
+
+    const {images,...toUpdate} = updateProductDto
+
+    
+
     const product = await this.productRepository.preload({ 
-      id:id, 
-      ...updateProductDto 
+      id, 
+      ...toUpdate
     })
 
     if(!product){
       throw new BadRequestException(`Product with id: ${id} not found`)
     }
 
+    //create query runner
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+
+
+
+
     try {
+      if(images){
+        await queryRunner.manager.delete(ProductImage,{product:{id:id}} )
+
+        product.images = images.map(image => this.ProductImageRepository.create({url:image})
+      )
+      }
+      await queryRunner.manager.save(product)
+
+
       return await this.productRepository.save(product)
     } catch (error) {
       return this.handleDBExceptions(error)

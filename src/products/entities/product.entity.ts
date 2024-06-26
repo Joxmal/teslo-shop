@@ -1,8 +1,15 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { CreateDateColumn,UpdateDateColumn,BeforeInsert, BeforeUpdate, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ProductImage } from "./product-images.entity";
 
 @Entity()
 export class Product {
+
+
+@CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP(6)" })
+public created_at: Date;
+
+@UpdateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP(6)", onUpdate: "CURRENT_TIMESTAMP(6)" })
+public updated_at: Date;
 
 @PrimaryGeneratedColumn('uuid')
 id: string;
@@ -63,10 +70,10 @@ tags: string[]
   (productImage) => productImage.product,
   {
     cascade: true,
+    eager: true
   }
 )
-
-images?: ProductImage
+images?: ProductImage[]
 
 @BeforeInsert()
 checkSlugInsert(){

@@ -38,4 +38,10 @@ gender:  'men' | 'women' | 'kid' | 'unisex'
 @IsOptional()
 tags: string[]
 
+
+@IsString({ each: true })
+@IsArray()
+@IsOptional()
+images?:string[]
+
 }
