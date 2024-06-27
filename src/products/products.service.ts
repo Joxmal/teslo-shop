@@ -71,7 +71,7 @@ export class ProductsService {
         })),
         total: products.length
        }
-      // TODO: relaciones
+    // TODO: relaciones
     // return this.productRepository.find().
   }
 
@@ -138,14 +138,23 @@ export class ProductsService {
       if(images){
         await queryRunner.manager.delete(ProductImage,{product:{id:id}} )
 
-        product.images = images.map(image => this.ProductImageRepository.create({url:image})
-      )
+        product.images = images.map(
+          image => this.ProductImageRepository.create({url:image})
+        )
+      }else{
+        /// ???
+        // product.images = []
       }
       await queryRunner.manager.save(product)
+      //await this.productRepository.save(product)
 
+      await queryRunner.commitTransaction() // hace el comir
+      await queryRunner.release() // ya no se conecta mas
+      return this.findOnePlain(id);
 
-      return await this.productRepository.save(product)
     } catch (error) {
+      await queryRunner.rollbackTransaction(); // es caso de error regresa los cambios
+      await queryRunner.release()
       return this.handleDBExceptions(error)
     }
   }
