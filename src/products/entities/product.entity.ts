@@ -28,7 +28,7 @@ price: number
   type: 'text',
   nullable: true
 })
-descripton: string
+description: string
 
 
 @Column({
@@ -70,7 +70,7 @@ tags: string[]
   (productImage) => productImage.product,
   {
     cascade: true,
-    eager: true
+    eager: true,
   }
 )
 images?: ProductImage[]
