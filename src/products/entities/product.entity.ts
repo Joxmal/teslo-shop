@@ -1,9 +1,11 @@
 import { CreateDateColumn,UpdateDateColumn,BeforeInsert, BeforeUpdate, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ProductImage } from "./product-images.entity";
 
-@Entity()
+@Entity({
+  comment: 'The product table contains all product items.',
+  name:'products'
+})
 export class Product {
-
 
 @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP(6)" })
 public created_at: Date;

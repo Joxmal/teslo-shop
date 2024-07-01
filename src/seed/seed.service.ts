@@ -13,7 +13,7 @@ export class SeedService {
   }
 
   private async inserNewProducts(){
-    this.productsService.deleteAllProducts();
+    await  this.productsService.deleteAllProducts();
 
     const insertPromisesProducts = []
     
